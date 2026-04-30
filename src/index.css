@@ -318,7 +318,7 @@ body::before {
 
 /* ─── Quiz Section ─── */
 .quiz-section {
-  background: linear-gradient(180deg, var(--bg-mid) 0%, var(--bg-deep) 100%);
+  background: linear-gradient(to bottom, var(--bg-mid), var(--bg-deep));
 }
 .quiz-cta-btn {
   display: inline-flex;
