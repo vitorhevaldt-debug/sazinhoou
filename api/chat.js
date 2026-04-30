@@ -1,88 +1,67 @@
-// api/chat.js — Vercel Serverless Function (proxy seguro para a API Groq)
-// A chave de API fica AQUI no servidor e nunca é enviada ao navegador.
-
+// api/chat.js - Proxy para Google Gemini 1.5 Flash
 export const config = {
   runtime: 'edge',
 };
 
 export default async function handler(req) {
-  // --- Validação do método ---
+  const GEMINI_KEY = process.env.GEMINI_KEY;
+
   if (req.method !== 'POST') {
-    return new Response(
-      JSON.stringify({ error: { message: 'Método não permitido' } }),
-      { status: 405, headers: { 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ error: { message: 'Método não permitido' } }), { status: 405 });
   }
 
-  // --- Validação da chave ---
-  const GROQ_KEY = process.env.GROQ_KEY;
-  if (!GROQ_KEY) {
-    return new Response(
-      JSON.stringify({
-        error: {
-          message: 'GROQ_KEY não está configurada nas variáveis de ambiente da Vercel. Vá em Settings > Environment Variables e adicione a chave.',
-        },
-      }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
-    );
+  if (!GEMINI_KEY) {
+    return new Response(JSON.stringify({ error: { message: 'GEMINI_KEY não configurada na Vercel.' } }), { status: 500 });
   }
 
   try {
-    // --- Ler e validar o body ---
     const body = await req.json();
+    
+    // Converte formato OpenAI/Groq para formato Gemini
+    const systemMessage = body.messages.find(m => m.role === 'system')?.content || '';
+    const chatMessages = body.messages.filter(m => m.role !== 'system').map(m => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content || m.text || '' }]
+    }));
 
-    if (!body.messages || !Array.isArray(body.messages) || body.messages.length === 0) {
-      return new Response(
-        JSON.stringify({ error: { message: 'O campo "messages" é obrigatório e deve ser um array.' } }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`;
 
-    // --- Chamar a API da Groq ---
-    const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const geminiResponse = await fetch(geminiUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${GROQ_KEY}`,
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: body.messages,
-        temperature: 0.7,
-        max_tokens: 800,
+        contents: chatMessages,
+        system_instruction: { parts: { text: systemMessage } },
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 800,
+        }
       }),
     });
 
-    const data = await groqResponse.json();
+    const data = await geminiResponse.json();
 
-    // --- Se a Groq retornou erro, repassar o erro ao frontend ---
-    if (!groqResponse.ok) {
-      const errorMsg = data?.error?.message || `Erro da API Groq: HTTP ${groqResponse.status}`;
-      return new Response(
-        JSON.stringify({ error: { message: errorMsg } }),
-        { status: groqResponse.status, headers: { 'Content-Type': 'application/json' } }
-      );
+    if (!geminiResponse.ok) {
+      return new Response(JSON.stringify({ error: { message: data.error?.message || 'Erro na API do Gemini' } }), { status: geminiResponse.status });
     }
 
-    // --- Validar que a resposta contém conteúdo ---
-    const content = data?.choices?.[0]?.message?.content;
-    if (!content) {
-      return new Response(
-        JSON.stringify({ error: { message: 'A API Groq retornou uma resposta vazia.' } }),
-        { status: 502, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
+    // Converte resposta do Gemini de volta para o formato que o frontend espera (OpenAI-like)
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    
+    const responseData = {
+      choices: [{
+        message: {
+          content: text
+        }
+      }]
+    };
 
-    // --- Sucesso: repassar a resposta completa ---
-    return new Response(JSON.stringify(data), {
+    return new Response(JSON.stringify(responseData), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
-    return new Response(
-      JSON.stringify({ error: { message: `Erro interno do servidor proxy: ${error.message}` } }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ error: { message: 'Erro interno no proxy: ' + error.message } }), { status: 500 });
   }
 }
