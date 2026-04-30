@@ -3,6 +3,7 @@ import { Crown, BookOpen, Scroll, Swords, FlaskConical, Scale } from 'lucide-rea
 import './index.css';
 import Reveal from './Reveal.jsx';
 import RevFrancesa from './RevFrancesa.jsx';
+import IndependenciaEUA from './IndependenciaEUA.jsx';
 import ChatAssistant from './ChatAssistant.jsx';
 
 /* ─── Inglesa data ─── */
@@ -246,6 +247,13 @@ const navLinks = {
     { label: 'Resumo',     id: 'fr-resumo'    },
     { label: 'Avaliação',  id: 'fr-quiz'      },
   ],
+  independencia: [
+    { label: 'Contexto',   id: 'ind-leitura'   },
+    { label: 'Cronologia', id: 'ind-timeline'  },
+    { label: 'Conceitos',  id: 'ind-conceitos' },
+    { label: 'Resumo',     id: 'ind-resumo'    },
+    { label: 'Avaliação',  id: 'ind-quiz'      },
+  ],
 };
 
 /* ─── Root App ─── */
@@ -275,17 +283,21 @@ export default function App() {
 
       {/* ── Tab bar ── */}
       <div className="tab-bar">
-        <button className={`tab-btn ${tab === 'inglesa'  ? 'active' : ''}`} onClick={() => switchTab('inglesa')}>
+        <button className={`tab-btn ${tab === 'inglesa'      ? 'active' : ''}`} onClick={() => switchTab('inglesa')}>
           Revolução Inglesa
         </button>
-        <button className={`tab-btn ${tab === 'francesa' ? 'active' : ''}`} onClick={() => switchTab('francesa')}>
+        <button className={`tab-btn ${tab === 'francesa'     ? 'active' : ''}`} onClick={() => switchTab('francesa')}>
           Revolução Francesa
+        </button>
+        <button className={`tab-btn ${tab === 'independencia' ? 'active' : ''}`} onClick={() => switchTab('independencia')}>
+          Independência dos EUA
         </button>
       </div>
 
       {/* ── Pages ── */}
-      {tab === 'inglesa'  && <RevInglesaPage />}
-      {tab === 'francesa' && <RevFrancesa    />}
+      {tab === 'inglesa'       && <RevInglesaPage />}
+      {tab === 'francesa'      && <RevFrancesa    />}
+      {tab === 'independencia' && <IndependenciaEUA />}
 
       {/* ── AI Chat Assistant ── */}
       <ChatAssistant />
