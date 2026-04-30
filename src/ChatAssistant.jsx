@@ -9,9 +9,8 @@ import React, {
 import DOMPurify from 'dompurify';
 
 /* ─── Config ─── */
-// Adicione VITE_GROQ_KEY=sua_chave no arquivo .env na raiz do projeto
-const API_KEY  = import.meta.env.VITE_GROQ_KEY || '';
-const API_URL  = 'https://api.groq.com/openai/v1/chat/completions';
+// O site agora usa um proxy seguro em /api/chat para esconder a chave.
+
 
 const SYSTEM_PROMPT = `Você é um assistente educacional especializado em História para estudantes de 11 a 17 anos. Siga estas regras sempre:
 - Responda EXCLUSIVAMENTE em português brasileiro.
@@ -151,11 +150,9 @@ export default function ChatAssistant() {
     }
   }, [open]);
 
-  /* ─── Call Groq API (Llama 3) ─── */
+  /* ─── Call Proxy API (Groq) ─── */
   const callAI = useCallback(async (userText) => {
-    if (!API_KEY) {
-      return '⚠️ **Chave de API não configurada.** Para ativar a IA, coloque no seu arquivo `.env`:\n\n`VITE_GROQ_KEY=sua_chave_aqui`\n\nObtenha uma chave gratuita (Groq) em: https://console.groq.com/keys';
-    }
+
 
     const messages = [
       { role: 'system', content: SYSTEM_PROMPT },
