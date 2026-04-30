@@ -152,36 +152,29 @@ export default function ChatAssistant() {
 
   /* ─── Call Proxy API (Groq) ─── */
   const callAI = useCallback(async (userText) => {
-
-
     const messages = [
       { role: 'system', content: SYSTEM_PROMPT },
       ...historyRef.current,
       { role: 'user', content: userText }
     ];
 
-    const body = {
-      model: 'llama-3.3-70b-versatile',
-      messages: messages,
-      temperature: 0.7,
-      max_tokens: 800,
-    };
-
-    const res  = await fetch('/api/chat', {
+    const res = await fetch('/api/chat', {
       method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(body),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages }),
     });
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err?.error?.message || `HTTP ${res.status}`);
+      throw new Error(err?.error?.message || `Erro HTTP ${res.status}`);
     }
 
-    const data   = await res.json();
-    const answer = data?.choices?.[0]?.message?.content || '';
+    const data = await res.json();
+    const answer = data?.choices?.[0]?.message?.content;
+
+    if (!answer || answer.trim().length === 0) {
+      throw new Error('A IA retornou uma resposta vazia. Tente novamente.');
+    }
 
     // persist history for multi-turn (OpenAI format)
     historyRef.current = [
