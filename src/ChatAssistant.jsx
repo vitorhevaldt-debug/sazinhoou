@@ -380,7 +380,7 @@ export default function ChatAssistant() {
 
         {/* Footer note */}
         <div className="ai-disclaimer">
-          Powered by Google Gemini 1.5 Flash · Respostas podem conter erros — sempre verifique
+          Powered by Llama 3 (Groq) · Respostas podem conter erros — sempre verifique
         </div>
       </div>
     </>

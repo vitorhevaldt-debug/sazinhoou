@@ -1,62 +1,43 @@
-// api/chat.js - Proxy para Google Gemini 1.5 Flash
+// api/chat.js — Vercel Serverless Function (proxy seguro para a API Groq)
 export const config = {
   runtime: 'edge',
 };
 
 export default async function handler(req) {
-  const GEMINI_KEY = process.env.GEMINI_KEY;
+  const GROQ_KEY = process.env.GROQ_KEY;
 
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: { message: 'Método não permitido' } }), { status: 405 });
   }
 
-  if (!GEMINI_KEY) {
-    return new Response(JSON.stringify({ error: { message: 'GEMINI_KEY não configurada na Vercel.' } }), { status: 500 });
+  if (!GROQ_KEY) {
+    return new Response(JSON.stringify({ error: { message: 'GROQ_KEY não configurada na Vercel.' } }), { status: 500 });
   }
 
   try {
     const body = await req.json();
-    
-    // Converte formato OpenAI/Groq para formato Gemini
-    const systemMessage = body.messages.find(m => m.role === 'system')?.content || '';
-    const chatMessages = body.messages.filter(m => m.role !== 'system').map(m => ({
-      role: m.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: m.content || m.text || '' }]
-    }));
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`;
-
-    const geminiResponse = await fetch(geminiUrl, {
+    const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${GROQ_KEY}`,
+      },
       body: JSON.stringify({
-        contents: chatMessages,
-        system_instruction: { parts: { text: systemMessage } },
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 800,
-        }
+        model: 'llama-3.3-70b-versatile',
+        messages: body.messages,
+        temperature: 0.7,
+        max_tokens: 800,
       }),
     });
 
-    const data = await geminiResponse.json();
+    const data = await groqResponse.json();
 
-    if (!geminiResponse.ok) {
-      return new Response(JSON.stringify({ error: { message: data.error?.message || 'Erro na API do Gemini' } }), { status: geminiResponse.status });
+    if (!groqResponse.ok) {
+      return new Response(JSON.stringify({ error: { message: data?.error?.message || 'Erro na API Groq' } }), { status: groqResponse.status });
     }
 
-    // Converte resposta do Gemini de volta para o formato que o frontend espera (OpenAI-like)
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    
-    const responseData = {
-      choices: [{
-        message: {
-          content: text
-        }
-      }]
-    };
-
-    return new Response(JSON.stringify(responseData), {
+    return new Response(JSON.stringify(data), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
